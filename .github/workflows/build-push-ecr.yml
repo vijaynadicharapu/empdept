@@ -46,6 +46,11 @@ jobs:
           exit-code: '0'
           severity: 'HIGH,CRITICAL'
 
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+           sarif_file: trivy-results.sarif
+
       - name: Tag Docker Image
         run: |
           docker tag \
