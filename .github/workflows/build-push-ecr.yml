@@ -53,19 +53,16 @@ jobs:
 
       - name: Verify Report
         run: |
-          echo "Reports Generated:"
-          ls -ltr reports
+          echo "===== Reports Folder ====="
+          ls -lah reports
+          echo "===== Report Size ====="
+          wc -c reports/trivy-results.sarif
 
-      - name: Upload Trivy Report Artifact
+      - name: Upload Trivy Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: trivy-report
+          name: trivy-report-${{ github.sha }}
           path: reports/trivy-results.sarif
-
-      - name: Upload SARIF Report
-        uses: github/codeql-action/upload-sarif@v4
-        with:
-          sarif_file: reports/trivy-results.sarif
 
       - name: Tag Docker Image
         run: |
@@ -82,13 +79,14 @@ jobs:
         run: |
           sed -i "s|image: .*|image: ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:${{ github.sha }}|g" kubernetes/deployment.yaml
 
-      - name: Commit Manifest Update
+      - name: Commit Deployment and Report
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
           git add kubernetes/deployment.yaml
+          git add reports/trivy-results.sarif
 
-          git commit -m "Update image tag to ${{ github.sha }}" || echo "No changes"
+          git commit -m "Update image and Trivy report ${{ github.sha }}" || echo "No changes"
 
           git push
