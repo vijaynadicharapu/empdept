@@ -6,6 +6,7 @@ on:
 permissions:
   id-token: write
   contents: write
+  security-events: write
 
 env:
   AWS_REGION: us-east-1
@@ -38,18 +39,33 @@ jobs:
             -t $ECR_REPOSITORY:${{ github.sha }} \
             -f docker/Dockerfile .
 
+      - name: Create Reports Directory
+        run: mkdir -p reports
+
       - name: Run Trivy Scan
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: '${{ env.ECR_REPOSITORY }}:${{ github.sha }}'
-          format: 'table'
+          format: 'sarif'
+          output: 'reports/trivy-results.sarif'
           exit-code: '0'
           severity: 'HIGH,CRITICAL'
 
-      - name: Upload SARIF
-        uses: github/codeql-action/upload-sarif@v3
+      - name: Verify Report
+        run: |
+          echo "Reports Generated:"
+          ls -ltr reports
+
+      - name: Upload Trivy Report Artifact
+        uses: actions/upload-artifact@v4
         with:
-           sarif_file: trivy-results.sarif
+          name: trivy-report
+          path: reports/trivy-results.sarif
+
+      - name: Upload SARIF Report
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: reports/trivy-results.sarif
 
       - name: Tag Docker Image
         run: |
